@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+cache/
+current.jpg
+home.jpg
+lock.jpg
+theme_backup*.json
+*.before-backup-cleanup
+.env
+*.log
