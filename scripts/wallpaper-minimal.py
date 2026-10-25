@@ -19,7 +19,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 # =====================================================
 
 TARGET_PACKAGE = "echo.music.iad1tya"
-BASE_DIR = os.path.expanduser("~/music-wallpaper")
+BASE_DIR = os.path.abspath(os.path.expanduser(os.environ.get("ECHOGLOW_HOME", "~/music-wallpaper")))
 CACHE_DIR = os.path.join(BASE_DIR, "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 HOME_OUT = os.path.join(BASE_DIR, "home.jpg")
