@@ -2,6 +2,78 @@
 
 set -u
 
+# ---------- GITHUB BOOTSTRAP ----------
+# If only install.sh was downloaded, fetch the required project files.
+if [ "${ECHOGLOW_BOOTSTRAPPED:-0}" != "1" ]; then
+    LOCAL_READY=1
+    for required in \
+        scripts/wallpaper.py \
+        scripts/wallpaper-minimal.py \
+        scripts/wallpaper-color.py \
+        requirements.txt \
+        fonts/static/SpaceGrotesk-Regular.ttf \
+        fonts/static/SpaceGrotesk-Medium.ttf \
+        fonts/static/SpaceGrotesk-Bold.ttf \
+        fonts/static/SpaceGrotesk-Light.ttf \
+        fonts/static/SpaceGrotesk-SemiBold.ttf
+    do
+        [ -s "$(dirname "${BASH_SOURCE[0]}")/$required" ] || LOCAL_READY=0
+    done
+
+    if [ "$LOCAL_READY" -eq 0 ]; then
+        REPO_URL="https://raw.githubusercontent.com/ANKIT-PIXEL-414/ECHOGLOW/main"
+        BOOT_DIR="$(mktemp -d "${TMPDIR:-$HOME}/echoglow-bootstrap.XXXXXX")" || exit 1
+
+        download_file() {
+            url="$1"
+            destination="$2"
+            if command -v curl >/dev/null 2>&1; then
+                curl -fLsS --retry 2 "$url" -o "$destination"
+            elif command -v wget >/dev/null 2>&1; then
+                wget -q "$url" -O "$destination"
+            else
+                printf '\nERROR: Install curl first: pkg install curl\n' >&2
+                return 1
+            fi
+            [ -s "$destination" ]
+        }
+
+        printf '\n\033[96m ECHOGLOW: downloading setup files from GitHub...\033[0m\n'
+
+        mkdir -p "$BOOT_DIR/scripts" "$BOOT_DIR/fonts/static" || exit 1
+        cp "${BASH_SOURCE[0]}" "$BOOT_DIR/install.sh" || exit 1
+
+        files=(
+            "scripts/wallpaper.py"
+            "scripts/wallpaper-minimal.py"
+            "scripts/wallpaper-color.py"
+            "requirements.txt"
+            "fonts/static/SpaceGrotesk-Regular.ttf"
+            "fonts/static/SpaceGrotesk-Medium.ttf"
+            "fonts/static/SpaceGrotesk-Bold.ttf"
+            "fonts/static/SpaceGrotesk-Light.ttf"
+            "fonts/static/SpaceGrotesk-SemiBold.ttf"
+        )
+
+        for file in "${files[@]}"; do
+            printf '  Downloading %s...\n' "$file"
+            if ! download_file "$REPO_URL/$file" "$BOOT_DIR/$file"; then
+                printf '\nERROR: Download failed: %s\n' "$file" >&2
+                printf 'No installation was started. Check your connection and retry.\n' >&2
+                rm -rf "$BOOT_DIR"
+                exit 1
+            fi
+        done
+
+        printf '\n\033[92m Downloads complete. Launching ECHOGLOW setup...\033[0m\n'
+        ECHOGLOW_BOOTSTRAPPED=1 bash "$BOOT_DIR/install.sh"
+        result=$?
+        rm -rf "$BOOT_DIR"
+        exit "$result"
+    fi
+fi
+# ---------- END BOOTSTRAP ----------
+
 REPO_URL="https://github.com/ANKIT-PIXEL-414/ECHOGLOW"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET="$HOME/music-wallpaper"
