@@ -37,7 +37,11 @@ BACKGROUND_TINT = (8, 8, 16)
 TINT_STRENGTH = 0.38
 
 # Android dynamic accent-colour sync (optional; requires running Shizuku).
-RISH_CANDIDATES = (os.path.expanduser("~/rish"), shutil.which("rish"))
+RISH_CANDIDATES = (
+    os.path.join(BASE_DIR, "shizuku", "rish"),
+    os.path.expanduser("~/rish"),
+    shutil.which("rish"),
+)
 THEME_SETTING = "theme_customization_overlay_packages"
 THEME_BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 THEME_SETTING_KEY = "secure"
@@ -204,7 +208,8 @@ def show_banner():
         )
     )
     print(paint(middle, C.PURPLE + C.BOLD))
-    print(framed("USER   Aki@termux", C.GREEN))
+    user_label = os.environ.get("LOGNAME") or os.environ.get("USER") or "termux"
+    print(framed(f"USER   {user_label}@termux", C.GREEN))
     print(framed("MODE   NEON / AUTO WALLPAPER", C.BLUE))
     print(paint(bottom, C.PURPLE + C.BOLD))
     print()
@@ -284,8 +289,11 @@ def get_notifications():
         return []
 
 
-def find_track():
-    for notification in get_notifications():
+def find_track(notifications=None):
+    if notifications is None:
+        notifications = get_notifications()
+
+    for notification in notifications:
         if notification.get("packageName") != TARGET_PACKAGE:
             continue
 
@@ -521,8 +529,9 @@ def run_rish_read(command, timeout=8):
     """Run a read-only Android shell command through rish."""
     rish_path = find_rish()
     if not rish_path:
+        local_rish = os.path.join(BASE_DIR, "shizuku", "rish")
         raise FileNotFoundError(
-            "rish launcher not found at ~/rish or on PATH; accent sync skipped"
+            f"rish launcher not found at {local_rish}, ~/rish or on PATH; accent sync skipped"
         )
     # rish is an Android-shell bridge. Quote each argument so metadata/JSON
     # cannot be interpreted as shell syntax.
@@ -1005,9 +1014,27 @@ def main():
         "⌁",
     )
 
+    empty_notification_cycles = 0
+    diagnostic_shown = False
+
     while True:
         try:
-            track_info = find_track()
+            notifications = get_notifications()
+            if not notifications:
+                empty_notification_cycles += 1
+                if empty_notification_cycles == 5 and not diagnostic_shown:
+                    log(
+                        "INFO",
+                        "No active notifications detected. If music is playing in Echo Music, "
+                        "ensure Termux:API has Notification Access granted in Android Settings.",
+                        C.YELLOW,
+                        "ℹ",
+                    )
+                    diagnostic_shown = True
+            else:
+                empty_notification_cycles = 0
+
+            track_info = find_track(notifications)
 
             if track_info:
                 title, artist = track_info
